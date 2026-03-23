@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       ref:
@@ -33,7 +35,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          ref: ${{ github.event.inputs.ref || github.ref }}
+          ref: ${{ github.event.inputs.ref || github.head_ref || github.ref }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -57,9 +59,11 @@ jobs:
           touch src/.vuepress/dist/.nojekyll
 
       - name: Setup Pages
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
+        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/upload-pages-artifact@v4
         with:
           path: src/.vuepress/dist
@@ -67,6 +71,7 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
     environment: github-pages
     steps:
       - name: Deploy to GitHub Pages
